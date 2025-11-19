@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  tax-assistant:
+    build: .
+    image: tax-assistant:local
+    command: ["uvicorn","api_server:app","--host","0.0.0.0","--port","8080"]
+    ports:
+      - "8080:8080"
+    environment:
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER}
+      - APP_PORT=8080
+    volumes:
+      - .:/app
+  n8n:
+    image: n8nio/n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - ./n8n:/home/node/.n8n

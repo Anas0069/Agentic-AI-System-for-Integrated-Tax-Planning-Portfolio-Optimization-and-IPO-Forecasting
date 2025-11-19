@@ -1,0 +1,765 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tax Optimizer & Portfolio Assistant</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Darker blue theme background */
+    html, body { 
+      height: 100%;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    }
+
+    .slider {
+      height: calc(100vh - 80px); /* below navbar */
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    }
+
+    .slide {
+      scroll-snap-align: start;
+      flex: 0 0 100%;
+      height: 100%;
+      padding: 2rem 1.5rem;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Page backgrounds */
+    .slide-1 {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(79, 70, 229, 0.1) 100%);
+    }
+    .slide-2 {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+    }
+    .slide-3 {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+    }
+
+    /* hide horizontal scrollbar but keep scroll */
+    .slider::-webkit-scrollbar { height: 8px; }
+    .slider::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 8px; }
+
+    /* Card styles */
+    .card { 
+      background: white; 
+      border-radius: 14px; 
+      padding: 1.5rem; 
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .muted { color: #6b7280; }
+
+    /* Arrow navigation buttons */
+    .arrow-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      cursor: pointer;
+      font-size: 1.5rem;
+      transition: all 0.3s ease;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+    }
+
+    .arrow-nav:hover {
+      background: rgba(255, 255, 255, 0.25);
+      border-color: rgba(255, 255, 255, 0.5);
+      transform: translateY(-50%) scale(1.1);
+    }
+
+    .arrow-left {
+      left: 20px;
+    }
+
+    .arrow-right {
+      right: 20px;
+    }
+
+    /* Dot indicators */
+    .dot-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 20;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dot.active {
+      background: white;
+      width: 30px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+    }
+
+    .dot:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Input focus styles with blue theme */
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #3b82f6 !important;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+
+    /* Button styles */
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: white;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+    }
+
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
+</head>
+<body class="font-sans">
+
+  <!-- NAVBAR -->
+  <nav class="h-20 bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 shadow-lg flex items-center px-6 sticky top-0 z-40 border-b border-blue-500/20">
+    <div class="flex items-center gap-4">
+      <i class="fas fa-coins text-blue-400 text-2xl"></i>
+      <div class="text-2xl font-bold text-white">Tax & Portfolio Assistant</div>
+    </div>
+    
+    <div class="ml-8 flex gap-6">
+      <button id="tab-calc" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 border-b-2 border-transparent hover:border-blue-400">
+        <i class="fas fa-calculator mr-2"></i>Tax Calculator
+      </button>
+      <button id="tab-ai" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 border-b-2 border-transparent hover:border-green-400">
+        <i class="fas fa-brain mr-2"></i>AI Advisor
+      </button>
+      <button id="tab-portfolio" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium text-white transition-all duration-300 border-b-2 border-transparent hover:border-orange-400">
+        <i class="fas fa-chart-pie mr-2"></i>Portfolio
+      </button>
+    </div>
+    
+    <div class="ml-auto text-sm">Backend: <span id="backend-status" class="font-medium text-blue-300">checking...</span></div>
+  </nav>
+
+  <!-- HORIZONTAL SLIDER -->
+  <div id="slider" class="slider">
+    <!-- LEFT: Tax Calculator -->
+    <section id="slide-calc" class="slide slide-1">
+      <!-- Left Arrow -->
+      <div class="arrow-nav arrow-left" id="arrow-left" style="display: none;">
+        <i class="fas fa-chevron-left"></i>
+      </div>
+
+      <div class="w-full max-w-3xl">
+        <div class="card">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-calculator text-blue-500 text-2xl"></i>
+            <h2 class="text-3xl font-bold text-gray-900">Income Tax Calculator</h2>
+          </div>
+          <p class="text-gray-600 mb-6">Estimate tax under Old vs New regime and see potential savings.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Annual Gross Salary (₹)</label>
+              <input id="income" type="number" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500" placeholder="Enter annual salary" value="1000000"/>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Age</label>
+              <select id="age" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500">
+                <option value="young">Below 60</option>
+                <option value="senior">60 - 80</option>
+                <option value="super">Above 80</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Regime Preference</label>
+              <select id="regime" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500">
+                <option value="auto">Compare both (recommended)</option>
+                <option value="new">New Tax Regime</option>
+                <option value="old">Old Tax Regime</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Deductions (approx total ₹)</label>
+              <input id="deductions" type="number" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-blue-500" placeholder="80C + 80D etc." value="300000"/>
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-3">
+            <button id="calc-btn" class="btn-primary px-6 py-3 rounded-lg font-semibold flex items-center gap-2">
+              <i class="fas fa-calculator"></i>Calculate Tax
+            </button>
+            <button id="clear-calc" class="px-6 py-3 rounded-lg font-semibold border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-all">
+              <i class="fas fa-redo mr-2"></i>Clear
+            </button>
+          </div>
+
+          <div id="calc-result" class="mt-8 card hidden"></div>
+        </div>
+      </div>
+
+      <!-- Right Arrow -->
+      <div class="arrow-nav arrow-right" id="arrow-right-1">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+    </section>
+
+    <!-- MIDDLE: AI Tax Optimizer -->
+    <section id="slide-ai" class="slide slide-2">
+      <!-- Left Arrow -->
+      <div class="arrow-nav arrow-left" id="arrow-left-2">
+        <i class="fas fa-chevron-left"></i>
+      </div>
+
+      <div class="w-full max-w-3xl">
+        <div class="card">
+          <div class="flex items-center gap-3 mb-4">
+            <i class="fas fa-brain text-green-500 text-2xl"></i>
+            <h2 class="text-3xl font-bold text-gray-900">AI Tax Advisor</h2>
+          </div>
+          <p class="text-gray-600 mb-6">Ask the assistant questions like: "How can I save tax on a salary of ₹10,00,000?"</p>
+
+          <div class="flex gap-2 mb-4">
+            <input id="ai-query" type="text" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:border-green-500" placeholder="Ask anything about tax...">
+            <button id="ai-send" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+
+          <div class="flex gap-2 flex-wrap mb-4">
+            <button class="chip px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-all" data-q="How can I save tax on a salary of 10 lakhs?">
+              <i class="fas fa-tag mr-2"></i>Save tax on ₹10L
+            </button>
+            <button class="chip px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-all" data-q="What deductions can a freelancer claim?">
+              <i class="fas fa-tag mr-2"></i>Freelancer deductions
+            </button>
+            <button class="chip px-4 py-2 border border-gray-300 rounded-lg text-sm bg-white hover:bg-gray-50 transition-all" data-q="How to save tax on rental income?">
+              <i class="fas fa-tag mr-2"></i>Rental income
+            </button>
+          </div>
+
+          <div id="ai-loading" class="mt-4 hidden text-center text-gray-600">
+            <i class="fas fa-spinner fa-spin mr-2"></i>Getting answer...
+          </div>
+          <div id="ai-result" class="mt-6 card hidden"></div>
+        </div>
+      </div>
+
+      <!-- Right Arrow -->
+      <div class="arrow-nav arrow-right" id="arrow-right-2">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+    </section>
+
+    <!-- RIGHT: Portfolio Optimizer -->
+    <section id="slide-portfolio" class="slide slide-3">
+      <!-- Left Arrow -->
+      <div class="arrow-nav arrow-left" id="arrow-left-3">
+        <i class="fas fa-chevron-left"></i>
+      </div>
+
+      <div class="w-full max-w-4xl">
+        <div class="card">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <i class="fas fa-chart-pie text-orange-500 text-2xl"></i>
+                <h2 class="text-3xl font-bold text-gray-900">Portfolio Optimizer</h2>
+              </div>
+              <p class="text-gray-600">Add tickers (e.g., INFY.NS, TCS.NS, AAPL) — the model will fetch live prices and propose allocation.</p>
+            </div>
+            <div class="text-sm text-gray-600 text-right">Model: <span class="font-semibold text-blue-600">PPO (local)</span></div>
+          </div>
+
+          <div class="flex gap-2 mb-4">
+            <input id="ticker-input" type="text" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:border-orange-500" placeholder="Add ticker e.g., INFY.NS"/>
+            <button id="add-ticker" class="px-4 py-3 border border-gray-300 rounded-lg font-semibold bg-white hover:bg-gray-50 transition-all">
+              <i class="fas fa-plus"></i>Add
+            </button>
+            <button id="optimize-btn" class="bg-gradient-to-r from-orange-600 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+              <i class="fas fa-magic mr-2"></i>Optimize
+            </button>
+            <button id="clear-tickers" class="px-4 py-3 border border-gray-300 rounded-lg font-semibold bg-white hover:bg-gray-50 transition-all">
+              <i class="fas fa-trash"></i>Clear
+            </button>
+          </div>
+
+          <div id="tickers-list" class="mt-4 flex gap-2 flex-wrap mb-4"></div>
+
+          <div id="portfolio-loading" class="mt-6 hidden text-center text-gray-600">
+            <i class="fas fa-spinner fa-spin mr-2"></i>Optimizing portfolio — may take a moment...
+          </div>
+
+          <div id="portfolio-result" class="mt-6 hidden">
+            <div class="grid md:grid-cols-2 gap-4 mb-4">
+              <div class="card">
+                <h3 class="font-semibold text-gray-900 mb-3">Allocation</h3>
+                <ul id="alloc-list" class="space-y-2 text-sm"></ul>
+              </div>
+
+              <div class="card">
+                <h3 class="font-semibold text-gray-900 mb-3">Live Prices</h3>
+                <ul id="price-list" class="space-y-2 text-sm"></ul>
+              </div>
+            </div>
+
+            <div class="mt-4 card">
+              <canvas id="allocation-chart" height="200"></canvas>
+            </div>
+
+            <div id="portfolio-note" class="mt-4 text-sm text-gray-600"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Arrow -->
+      <div class="arrow-nav arrow-right" id="arrow-right-3" style="display: none;">
+        <i class="fas fa-chevron-right"></i>
+      </div>
+    </section>
+  </div>
+
+  <!-- Dot Indicators -->
+  <div class="dot-container">
+    <div class="dot active" data-slide="0"></div>
+    <div class="dot" data-slide="1"></div>
+    <div class="dot" data-slide="2"></div>
+  </div>
+
+  <!-- FOOTER / HELP -->
+  <footer class="p-4 text-center text-gray-400 text-xs bg-gray-900/50 border-t border-blue-500/20">
+    <i class="fas fa-info-circle mr-2"></i>You can include NSE tickers with .NS suffix (e.g., INFY.NS). Make sure backend is running at <code class="bg-gray-800 px-2 py-1 rounded">http://localhost:8080</code>
+  </footer>
+
+<script>
+/* ---------- small helpers ---------- */
+const backend = (() => {
+  const base = "http://localhost:8080";
+  return {
+    statusUrl: base + "/status",
+    aiQueryUrl: base + "/query",
+    portfolioUrl: base + "/portfolio_optimize",
+  };
+})();
+
+async function checkBackend() {
+  try {
+    const r = await fetch(backend.statusUrl);
+    const json = await r.json();
+    document.getElementById("backend-status").textContent = json.status === "ok" ? `${json.provider} ${json.model}` : "error";
+  } catch (e) {
+    document.getElementById("backend-status").textContent = "offline";
+  }
+}
+checkBackend();
+
+/* ---------- NAVBAR / SLIDER controls ---------- */
+const slider = document.getElementById("slider");
+let currentSlide = 0;
+
+function navigateToSlide(idx) {
+  currentSlide = idx;
+  slider.scrollTo({left: idx * window.innerWidth, behavior: "smooth"});
+  updateUI();
+}
+
+document.getElementById("tab-calc").onclick = () => navigateToSlide(0);
+document.getElementById("tab-ai").onclick = () => navigateToSlide(1);
+document.getElementById("tab-portfolio").onclick = () => navigateToSlide(2);
+
+// Arrow navigation
+document.getElementById("arrow-right-1").onclick = () => navigateToSlide(1);
+document.getElementById("arrow-left-2").onclick = () => navigateToSlide(0);
+document.getElementById("arrow-right-2").onclick = () => navigateToSlide(2);
+document.getElementById("arrow-left-3").onclick = () => navigateToSlide(1);
+
+// Dot navigation
+document.querySelectorAll('.dot').forEach((dot, idx) => {
+  dot.addEventListener('click', () => navigateToSlide(idx));
+});
+
+function updateUI() {
+  // Update nav tabs
+  document.querySelectorAll('.nav-btn').forEach((b, i) => {
+    if (i === currentSlide) {
+      b.classList.add('border-blue-400');
+      b.classList.remove('border-transparent');
+    } else {
+      b.classList.remove('border-blue-400');
+      b.classList.add('border-transparent');
+    }
+  });
+
+  // Update dots
+  document.querySelectorAll('.dot').forEach((dot, i) => {
+    if (i === currentSlide) {
+      dot.classList.add('active');
+    } else {
+      dot.classList.remove('active');
+    }
+  });
+
+  // Update arrow visibility
+  document.getElementById("arrow-left").style.display = currentSlide === 0 ? "none" : "flex";
+  document.getElementById("arrow-right-1").style.display = currentSlide === 0 ? "flex" : "none";
+  document.getElementById("arrow-left-2").style.display = currentSlide === 1 ? "flex" : "none";
+  document.getElementById("arrow-right-2").style.display = currentSlide === 1 ? "flex" : "none";
+  document.getElementById("arrow-left-3").style.display = currentSlide === 2 ? "flex" : "none";
+  document.getElementById("arrow-right-3").style.display = currentSlide === 2 ? "none" : "flex";
+}
+
+/* scroll indicator styling */
+slider.addEventListener('scroll', () => {
+  const idx = Math.round(slider.scrollLeft / window.innerWidth);
+  if (idx !== currentSlide) {
+    currentSlide = idx;
+    updateUI();
+  }
+});
+
+// Initialize UI
+updateUI();
+
+/* ---------- TAX CALCULATOR ---------- */
+document.getElementById("calc-btn").addEventListener("click", () => {
+  const income = Number(document.getElementById("income").value || 0);
+  const age = document.getElementById("age").value;
+  const regime = document.getElementById("regime").value;
+  const deductions = Number(document.getElementById("deductions").value || 0);
+
+  if (!income || income <= 0) {
+    alert("Enter a valid income");
+    return;
+  }
+
+  // simplifed tax calc example for demo (India FY rates example)
+  // NOTE: This is a demonstrative calculator — update rules as needed
+  function slabTax(taxable) {
+    let tax = 0;
+    // very simplified: only approximate
+    if (taxable <= 250000) tax = 0;
+    else if (taxable <= 500000) tax = (taxable - 250000) * 0.05;
+    else if (taxable <= 1000000) tax = 12500 + (taxable - 500000) * 0.2;
+    else tax = 112500 + (taxable - 1000000) * 0.3;
+    return Math.round(tax);
+  }
+
+  const standardDed = 50000;
+  const taxableNew = Math.max(0, income - standardDed); // new regime simple
+  const taxableOld = Math.max(0, income - Math.min(deductions + standardDed, income));
+
+  const taxNew = slabTax(taxableNew); // approximation
+  const taxOld = slabTax(taxableOld);
+
+  const chosen = (regime === "auto") ? (taxNew <= taxOld ? "New" : "Old") : (regime === "new" ? "New" : "Old");
+  const recommended = chosen === "New" ? {regime: "New", tax: taxNew} : {regime: "Old", tax: taxOld};
+
+  const resultDiv = document.getElementById("calc-result");
+  resultDiv.classList.remove("hidden");
+  resultDiv.innerHTML = `
+    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <p class="text-sm text-blue-700">✓ Selected regime (recommended): <strong>${recommended.regime}</strong></p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="card bg-blue-50 border border-blue-200">
+        <div class="text-xs font-semibold text-blue-700 uppercase mb-1">Estimated Tax Payable</div>
+        <div class="text-3xl font-bold text-blue-900">₹ ${recommended.tax.toLocaleString()}</div>
+      </div>
+      <div class="card bg-green-50 border border-green-200">
+        <div class="text-xs font-semibold text-green-700 uppercase mb-1">Savings Potential</div>
+        <div class="text-3xl font-bold text-green-900">₹ ${Math.abs(taxNew - taxOld).toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="card bg-gray-50">
+      <div class="text-xs font-semibold text-gray-700 uppercase mb-3">Regime Comparison</div>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="p-3 bg-white rounded border border-gray-200">
+          <p class="text-xs text-gray-600 mb-1">New Regime Tax</p>
+          <p class="text-xl font-bold text-gray-900">₹ ${taxNew.toLocaleString()}</p>
+        </div>
+        <div class="p-3 bg-white rounded border border-gray-200">
+          <p class="text-xs text-gray-600 mb-1">Old Regime Tax</p>
+          <p class="text-xl font-bold text-gray-900">₹ ${taxOld.toLocaleString()}</p>
+        </div>
+      </div>
+    </div>
+  `;
+});
+
+document.getElementById("clear-calc").addEventListener("click", () => {
+  document.getElementById("income").value = "";
+  document.getElementById("deductions").value = "";
+  document.getElementById("calc-result").classList.add("hidden");
+});
+
+/* ---------- AI TAX ADVISOR ---------- */
+const aiQueryInput = document.getElementById("ai-query");
+const aiSendBtn = document.getElementById("ai-send");
+const aiResult = document.getElementById("ai-result");
+const aiLoading = document.getElementById("ai-loading");
+
+document.querySelectorAll('.chip').forEach(c=> c.addEventListener('click', (e)=> {
+  aiQueryInput.value = e.target.dataset.q;
+}));
+
+aiSendBtn.addEventListener("click", async () => {
+  const q = aiQueryInput.value.trim();
+  if (!q) return alert("Please type a query.");
+
+  aiResult.classList.add("hidden");
+  aiLoading.classList.remove("hidden");
+  aiLoading.textContent = "⏳ Getting answer...";
+
+  try {
+    const res = await fetch(backend.aiQueryUrl, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({query: q})
+    });
+    const data = await res.json();
+
+    aiLoading.classList.add("hidden");
+    aiResult.classList.remove("hidden");
+
+    // Flexible rendering: support different response shapes
+    let html = "<h3 class='font-semibold text-lg text-gray-900 mb-4 flex items-center gap-2'><i class='fas fa-sparkles text-green-500'></i>AI Recommendations</h3>";
+// Always define payload cleanly
+    const payload = (() => {
+      if (data.output && typeof data.output === "string") {
+        try {
+          return JSON.parse(data.output.replace(/```json|```/g, ""));
+        } catch (e) {
+          return { summary: data.output };
+        }
+      }
+      return data.result ?? data;
+    })();
+
+    // If it returned a "mode" wrapper (we added in earlier steps), unwrap
+    
+    // if payload has DIRECT/INDIRECT style:
+    if (payload.DIRECT || payload.INDIRECT) {
+      const direct = payload.DIRECT;
+      html += `<div class="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4"><strong class="text-blue-900">Direct Tax Strategy:</strong><div class="text-gray-800 text-sm mt-2">${(direct.summary || direct)}</div></div>`;
+      if (direct.suggestions) {
+        html += `<div class="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4"><strong class="text-amber-900">Key Tips:</strong><ul class="mt-2 text-sm space-y-2 text-gray-800">` + direct.suggestions.map(s=>`<li class="flex gap-2"><i class="fas fa-check-circle text-green-500 flex-shrink-0 mt-0.5"></i><span>${s}</span></li>`).join("") + `</ul></div>`;
+      }
+    } else if (payload.summary || payload.SUMMARY) {
+      const s = payload.summary || payload.SUMMARY || payload;
+      html += `<div class="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4 text-gray-800">${typeof s==='string'?s:JSON.stringify(s)}</div>`;
+    } else {
+      // fallback: print full JSON prettified
+      html += `<pre class="mt-2 text-xs bg-gray-100 p-4 rounded border border-gray-300">${JSON.stringify(payload, null, 2)}</pre>`;
+    }
+
+    aiResult.innerHTML = html;
+
+  } catch (err) {
+    aiLoading.classList.add("hidden");
+    aiResult.classList.remove("hidden");
+    aiResult.innerHTML = `<div class="text-sm text-red-600">Error: ${err.message}</div>`;
+  }
+});
+
+/* ---------- PORTFOLIO UI ---------- */
+let tickers = [];
+
+const tickersList = document.getElementById("tickers-list");
+const tickerInput = document.getElementById("ticker-input");
+const addTickerBtn = document.getElementById("add-ticker");
+const clearTickersBtn = document.getElementById("clear-tickers");
+const optimizeBtn = document.getElementById("optimize-btn");
+const portfolioLoading = document.getElementById("portfolio-loading");
+const portfolioResult = document.getElementById("portfolio-result");
+const allocList = document.getElementById("alloc-list");
+const priceList = document.getElementById("price-list");
+const note = document.getElementById("portfolio-note");
+let allocationChart = null;
+
+function renderTickers() {
+  tickersList.innerHTML = "";
+  tickers.forEach((t, idx) => {
+    const chip = document.createElement("div");
+    chip.className = "px-4 py-2 bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-300 rounded-lg flex items-center gap-2 text-sm font-medium text-orange-900";
+    chip.innerHTML = `<i class="fas fa-chart-line"></i><span>${t}</span><button data-i="${idx}" class="ml-2 text-orange-600 hover:text-orange-900 font-bold remove-ticker">×</button>`;
+    tickersList.appendChild(chip);
+  });
+  document.querySelectorAll(".remove-ticker").forEach(b => b.addEventListener("click", e => {
+    const i = Number(e.target.dataset.i);
+    tickers.splice(i,1);
+    renderTickers();
+  }));
+}
+
+addTickerBtn.addEventListener("click", () => {
+  const t = tickerInput.value.trim().toUpperCase();
+  if (!t) return;
+  if (!tickers.includes(t)) tickers.push(t);
+  tickerInput.value = "";
+  renderTickers();
+});
+
+clearTickersBtn.addEventListener("click", ()=> {
+  tickers = [];
+  renderTickers();
+  portfolioResult.classList.add("hidden");
+});
+
+optimizeBtn.addEventListener("click", async () => {
+  if (tickers.length === 0) return alert("Add at least one ticker (e.g., INFY.NS)");
+  portfolioLoading.classList.remove("hidden");
+  portfolioResult.classList.add("hidden");
+  portfolioLoading.textContent = "⏳ Optimizing portfolio — may take a few seconds if model must train...";
+
+  try {
+    const res = await fetch(backend.portfolioUrl, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({tickers})
+    });
+    const data = await res.json();
+    portfolioLoading.classList.add("hidden");
+
+    if (data.error) {
+      note.textContent = "Error: " + (data.details || data.error);
+      portfolioResult.classList.add("hidden");
+      return;
+    }
+
+    // Data shape expected: { tickers_used, allocation_percent, live_prices, expected_return, risk_score }
+    const result = data.result ?? data;
+    const used = result.tickers_used || result.tickers || tickers;
+    const allocation = result.allocation_percent || result.allocation || {};
+    const livePrices = result.live_prices || result.livePrices || result.live_price || {};
+
+    // render lists
+    allocList.innerHTML = "";
+    priceList.innerHTML = "";
+
+    // convert allocation to array for chart
+    const labels = [];
+    const values = [];
+    used.forEach(t => {
+      const v = allocation[t] ?? allocation[t.toUpperCase()] ?? 0;
+      labels.push(t);
+      values.push(Number(v));
+      const li = document.createElement("li");
+      li.className = "flex justify-between text-gray-900 font-medium";
+      li.innerHTML = `<span>${t}</span><span class="text-orange-600 font-bold">${Number(v).toFixed(2)}%</span>`;
+      allocList.appendChild(li);
+      const pl = document.createElement("li");
+      pl.className = "flex justify-between text-gray-900";
+      const price = livePrices[t] ?? livePrices[t.toUpperCase()] ?? null;
+      pl.innerHTML = `<span>${t}</span><span class="text-blue-600 font-semibold">${price !== null && price !== undefined ? '₹ ' + Number(price).toLocaleString() : 'N/A'}</span>`;
+      priceList.appendChild(pl);
+    });
+
+    // draw chart
+    const ctx = document.getElementById("allocation-chart").getContext("2d");
+    if (allocationChart) { allocationChart.destroy(); allocationChart = null; }
+    allocationChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: { 
+        labels, 
+        datasets: [{ 
+          data: values, 
+          borderWidth: 2,
+          borderColor: 'white',
+          backgroundColor: [
+            '#3b82f6',
+            '#10b981',
+            '#f59e0b',
+            '#ef4444',
+            '#8b5cf6',
+            '#ec4899',
+            '#06b6d4',
+            '#14b8a6'
+          ]
+        }] 
+      },
+      options: { 
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { 
+          legend: { 
+            position: 'bottom',
+            labels: { padding: 15, font: { size: 12, weight: 'bold' } }
+          } 
+        } 
+      }
+    });
+
+    portfolioResult.classList.remove("hidden");
+    note.innerHTML = `<i class="fas fa-chart-line text-blue-600 mr-2"></i>Expected return: <strong>${result.expected_return || 'N/A'}</strong> · Risk: <strong>${result.risk_score || 'N/A'}</strong>`;
+
+  } catch (err) {
+    portfolioLoading.classList.add("hidden");
+    note.textContent = "Request failed: " + err.message;
+  }
+});
+
+/* ---------- Allow sending query by Enter key ---------- */
+aiQueryInput.addEventListener("keydown", (e)=> { if (e.key === 'Enter') aiSendBtn.click(); });
+tickerInput.addEventListener("keydown", (e)=> { if (e.key === 'Enter') addTickerBtn.click(); });
+
+/* ---------- Init small defaults ---------- */
+tickers = ["TCS.NS","INFY.NS","RELIANCE.NS","HDFCBANK.NS"];
+renderTickers();
+</script>
+</body>
+</html>

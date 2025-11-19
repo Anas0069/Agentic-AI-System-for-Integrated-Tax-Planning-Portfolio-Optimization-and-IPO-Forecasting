@@ -1,0 +1,46 @@
+{
+  "name": "Tax Assistant AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "tax-agent",
+        "options": {
+          "responseMode": "lastNode"
+        }
+      },
+      "id": "Webhook_1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "webhookId": "tax-agent"
+    },
+    {
+      "parameters": {
+        "model": "gemini-1.5-flash-latest",
+        "systemMessage": "You are an Indian Tax Advisor. Respond concisely in bullet points with:\n- Summary\n- 3 actionable saving tips\n- 💰 Estimated saving range (in ₹)\nKeep it under 80 words and strictly JSON format.",
+        "input": "={{ $json[\"query\"] }}",
+        "responseFormat": "json"
+      },
+      "id": "AIAgent_1",
+      "name": "AI Agent",
+      "type": "n8n-nodes-base.aiAgent",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {},
+      "id": "RespondWebhook_1",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [800, 300]
+    }
+  ],
+  "connections": {
+    "Webhook_1": { "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]] },
+    "AI Agent": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": true
+}

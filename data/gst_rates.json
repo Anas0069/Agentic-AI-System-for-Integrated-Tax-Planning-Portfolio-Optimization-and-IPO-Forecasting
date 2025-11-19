@@ -1,0 +1,4 @@
+{
+  "goods": {"food_items": 5, "electronics": 18, "luxury": 28},
+  "services": {"consulting": 18, "education": 0, "healthcare": 0}
+}
